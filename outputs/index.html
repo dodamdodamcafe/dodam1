@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>도담 패키지 관리</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Dodam Schedule Manager</p>
+      <h1>도담 패키지 관리</h1>
+    </div>
+    <div class="header-actions">
+      <button class="ghost" id="connectSaveFileBtn" type="button">자동저장 파일 연결</button>
+      <button class="ghost" id="exportBtn" type="button">내보내기</button>
+      <label class="ghost file-action">
+        가져오기
+        <input id="importFile" type="file" accept="application/json">
+      </label>
+      <button class="danger" id="resetBtn" type="button">초기화</button>
+      <div id="autoSaveStatus" class="save-status" aria-live="polite">브라우저에 자동 저장 중</div>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="summary-grid" aria-label="요약">
+      <article>
+        <span>등록 학생</span>
+        <strong id="studentCount">0명</strong>
+      </article>
+      <article>
+        <span>이번 달 수업</span>
+        <strong id="monthLessonCount">0회</strong>
+      </article>
+      <article>
+        <span>패키지 차감</span>
+        <strong id="packageLessonCount">0회</strong>
+      </article>
+      <article>
+        <span>원데이</span>
+        <strong id="onedayLessonCount">0회</strong>
+      </article>
+    </section>
+
+    <section class="workspace">
+      <section class="main-panel">
+        <div class="toolbar">
+          <button class="icon-button" id="prevMonth" type="button" aria-label="이전 달">‹</button>
+          <h2 id="monthTitle">월별 스케줄</h2>
+          <button class="icon-button" id="nextMonth" type="button" aria-label="다음 달">›</button>
+          <button class="ghost today-button" id="todayBtn" type="button">오늘</button>
+        </div>
+        <div class="calendar" id="calendar" aria-label="월별 스케줄러"></div>
+      </section>
+
+      <aside class="side-panel">
+        <div class="panel-section">
+          <h2>학생 등록</h2>
+          <form id="studentForm" class="stacked-form">
+            <input id="studentName" type="text" placeholder="아이 이름" required>
+            <input id="studentPhone" type="text" placeholder="연락처 또는 보호자 메모">
+            <button type="submit">학생 추가</button>
+          </form>
+          <div id="studentList" class="student-list"></div>
+        </div>
+
+        <div class="panel-section">
+          <h2>패키지 구매</h2>
+          <form id="packageForm" class="stacked-form">
+            <select id="packageStudent" required></select>
+            <div class="segmented" role="radiogroup" aria-label="패키지 종류">
+              <label><input type="radio" name="packageType" value="10" checked> 10회</label>
+              <label><input type="radio" name="packageType" value="20"> 20회</label>
+            </div>
+            <label class="field-label">구매 날짜
+              <input id="purchaseDate" type="date" required>
+            </label>
+            <button type="submit">패키지 추가</button>
+          </form>
+        </div>
+
+        <div class="panel-section">
+          <h2>수업 예약</h2>
+          <form id="lessonForm" class="stacked-form">
+            <select id="lessonStudent" required></select>
+            <div class="inline-fields">
+              <input id="lessonDate" type="date" required>
+              <input id="lessonTime" type="time">
+            </div>
+            <select id="lessonKind" required>
+              <option value="package">패키지 차감</option>
+              <option value="oneday">원데이</option>
+            </select>
+            <input id="lessonMemo" type="text" placeholder="메모">
+            <button type="submit">예약 추가</button>
+          </form>
+        </div>
+      </aside>
+
+      <aside class="status-panel">
+        <div class="panel-section">
+          <h2>카톡 안내문</h2>
+          <div class="message-tool">
+            <select id="messageStudent"></select>
+            <textarea id="messageText" rows="5" readonly></textarea>
+            <button id="copyMessageBtn" type="button">문구 복사</button>
+            <div id="copyMessageStatus" class="copy-status" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="panel-section package-list-section">
+          <h2>패키지 리스트</h2>
+          <div id="packageStatus" class="package-table"></div>
+        </div>
+        <div class="panel-section">
+          <h2>이번 달 예약</h2>
+          <div id="lessonList" class="lesson-list"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <template id="emptyTemplate">
+    <div class="empty-state">등록된 내용이 없습니다.</div>
+  </template>
+
+  <script src="./app.js"></script>
+</body>
+</html>
