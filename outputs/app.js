@@ -26,6 +26,7 @@ const els = {
   packageStudent: $("#packageStudent"),
   lessonStudent: $("#lessonStudent"),
   messageStudent: $("#messageStudent"),
+  messageUsageList: $("#messageUsageList"),
   messageText: $("#messageText"),
   copyMessageBtn: $("#copyMessageBtn"),
   copyMessageStatus: $("#copyMessageStatus"),
@@ -491,6 +492,7 @@ function renderMessage(computed) {
   els.copyMessageStatus.textContent = "";
   if (state.students.length === 0) {
     els.messageText.value = "";
+    els.messageUsageList.innerHTML = "";
     return;
   }
 
@@ -501,7 +503,33 @@ function renderMessage(computed) {
 
   const student = findStudent(studentId);
   const summary = getStudentPackageSummary(studentId, computed);
-  els.messageText.value = buildMessage(student, summary);
+  const usage = getStudentPackageUsage(studentId, computed);
+  renderMessageUsageList(usage);
+  els.messageText.value = buildMessage(student, summary, usage);
+}
+
+function renderMessageUsageList(usage) {
+  els.messageUsageList.innerHTML = "";
+  if (usage.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "패키지 사용 내역이 없습니다.";
+    els.messageUsageList.appendChild(empty);
+    return;
+  }
+
+  usage.forEach((item, index) => {
+    const row = document.createElement("article");
+    row.className = "usage-row";
+    row.innerHTML = `
+      <div class="usage-title">
+        <b>${formatDate(item.date)} ${item.time || "시간 미정"}</b>
+        <span class="usage-count">${index + 1}회차</span>
+      </div>
+      <div class="meta">${escapeHTML(item.memo || "패키지 수업")}</div>
+    `;
+    els.messageUsageList.appendChild(row);
+  });
 }
 
 async function copyMessage() {
@@ -577,14 +605,40 @@ function getStudentPackageSummary(studentId, computed) {
   return studentPackages[studentPackages.length - 1] || null;
 }
 
-function buildMessage(student, pkg) {
+function getStudentPackageUsage(studentId, computed) {
+  return state.lessons
+    .filter((lesson) => lesson.studentId === studentId && lesson.kind === "package" && computed.lessonAllocation.has(lesson.id))
+    .slice()
+    .sort(sortLessons)
+    .map((lesson) => ({
+      date: lesson.date,
+      time: lesson.time,
+      memo: lesson.memo,
+      packageId: computed.lessonAllocation.get(lesson.id),
+    }));
+}
+
+function buildMessage(student, pkg, usage) {
   if (!student) return "";
   if (!pkg) {
     return `${student.name} 학생은 현재 등록된 패키지가 없습니다.`;
   }
 
   const expiryText = pkg.expiryDate ? `${formatDate(pkg.expiryDate)}까지` : "첫 수업일 기준으로 자동 계산될 예정";
-  return `${student.name} 학생 패키지 안내드립니다.\n총 ${pkg.total}회 중 ${pkg.remaining}회 남아있고, 사용기한은 ${expiryText}입니다.`;
+  const lines = [
+    `${student.name} 학생 패키지 안내드립니다.`,
+    `총 ${pkg.total}회 중 ${pkg.remaining}회 남아있고, 사용기한은 ${expiryText}입니다.`,
+  ];
+
+  if (usage.length > 0) {
+    lines.push("", "패키지 사용 내역");
+    usage.forEach((item, index) => {
+      const memo = item.memo ? ` · ${item.memo}` : "";
+      lines.push(`${index + 1}. ${formatDate(item.date)} ${item.time || "시간 미정"}${memo}`);
+    });
+  }
+
+  return lines.join("\n");
 }
 
 function computePackages() {

@@ -378,7 +378,8 @@ h2 {
 
 .status-list,
 .lesson-list,
-.student-list {
+.student-list,
+.usage-list {
   display: grid;
   gap: 10px;
   margin-top: 12px;
@@ -386,7 +387,8 @@ h2 {
 
 .package-card,
 .lesson-row,
-.student-row {
+.student-row,
+.usage-row {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
@@ -402,6 +404,30 @@ h2 {
   display: grid;
   gap: 10px;
   margin-top: 12px;
+}
+
+.usage-list {
+  max-height: 220px;
+  overflow: auto;
+  margin-top: 0;
+}
+
+.usage-row {
+  display: grid;
+  gap: 4px;
+}
+
+.usage-row .usage-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.usage-row .usage-count {
+  color: var(--brand);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .copy-status {
