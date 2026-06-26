@@ -535,41 +535,64 @@ function renderLessonChip(lesson, computed) {
 
 function renderPackageStatus(computed) {
   els.packageStatus.innerHTML = "";
-  if (state.packages.length === 0) {
-    els.packageStatus.appendChild(emptyTemplate.content.cloneNode(true));
-    return;
-  }
-
-  const header = document.createElement("div");
-  header.className = "package-row header";
-  header.innerHTML = `
-    <span>이름</span>
-    <span>수업</span>
-    <span>잔여</span>
-    <span>사용기한</span>
-    <span>관리</span>
-  `;
-  els.packageStatus.appendChild(header);
-
-  computed.packages.forEach((pkg) => {
-    const student = findStudent(pkg.studentId);
-    const remaining = pkg.total - pkg.used;
-    const status = getPackageStatus(pkg, remaining);
-    const row = document.createElement("article");
-    row.className = `package-row ${status.className}`;
-    row.innerHTML = `
-      <b>${escapeHTML(student?.name || "삭제된 학생")}</b>
-      <span>${getProgramName(pkg.program)}</span>
-      <span>${Math.max(0, remaining)} / ${pkg.total}회</span>
-      <span class="meta">${getPackageExpiryText(pkg)}</span>
-      <button class="delete-btn" type="button" data-delete-package="${pkg.id}">삭제</button>
-      <span class="meta">${status.label} · 구매 ${formatDate(pkg.purchaseDate)}</span>
-      <span class="meta">사용 ${pkg.used}회</span>
-      <span class="meta">첫 수업 ${pkg.firstClassDate ? formatDate(pkg.firstClassDate) : "미정"}</span>
-      <span class="meta"></span>
-      <span class="meta"></span>
+  [
+    ["art", "미술"],
+    ["korean", "한글"],
+    ["visit", "방문"],
+  ].forEach(([program, title]) => {
+    const programPackages = computed.packages.filter((pkg) => pkg.program === program);
+    const group = document.createElement("section");
+    group.className = `package-group ${program}`;
+    group.innerHTML = `
+      <div class="package-group-title">
+        <h3>${title}</h3>
+        <span>${programPackages.length}명</span>
+      </div>
     `;
-    els.packageStatus.appendChild(row);
+
+    if (programPackages.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state compact-empty";
+      empty.textContent = "등록된 패키지가 없습니다.";
+      group.appendChild(empty);
+      els.packageStatus.appendChild(group);
+      return;
+    }
+
+    const header = document.createElement("div");
+    header.className = "package-row header";
+    header.innerHTML = `
+      <span>이름</span>
+      <span>잔여</span>
+      <span>사용기한</span>
+      <span>상태</span>
+      <span>관리</span>
+    `;
+    group.appendChild(header);
+
+    programPackages.forEach((pkg) => {
+      const student = findStudent(pkg.studentId);
+      const remaining = Math.max(0, pkg.total - pkg.used);
+      const status = getPackageStatus(pkg, remaining);
+      const isLow = remaining > 0 && remaining <= 2;
+      const row = document.createElement("article");
+      row.className = `package-row ${status.className} ${isLow ? "low-remaining" : ""}`;
+      row.innerHTML = `
+        <b>${isLow ? "⭐ " : ""}${escapeHTML(student?.name || "삭제된 학생")}</b>
+        <span>${remaining} / ${pkg.total}회</span>
+        <span class="meta">${getPackageExpiryText(pkg)}</span>
+        <span class="meta">${status.label}</span>
+        <button class="delete-btn" type="button" data-delete-package="${pkg.id}">삭제</button>
+        <span class="meta">구매 ${formatDate(pkg.purchaseDate)}</span>
+        <span class="meta">사용 ${pkg.used}회</span>
+        <span class="meta">첫 수업 ${pkg.firstClassDate ? formatDate(pkg.firstClassDate) : "미정"}</span>
+        <span class="meta">${isLow ? "소진 임박" : ""}</span>
+        <span class="meta"></span>
+      `;
+      group.appendChild(row);
+    });
+
+    els.packageStatus.appendChild(group);
   });
 
   els.packageStatus.querySelectorAll("[data-delete-package]").forEach((button) => {
