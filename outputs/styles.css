@@ -578,6 +578,21 @@ h2 {
   gap: 6px;
 }
 
+.attendance-package-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.compact-empty {
+  padding: 12px;
+}
+
 .student-row {
   display: grid;
   gap: 4px;

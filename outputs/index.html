@@ -59,28 +59,24 @@
 
       <aside class="side-panel">
         <div class="panel-section">
-          <h2>학생 등록</h2>
-          <form id="studentForm" class="stacked-form">
+          <h2>아이/패키지 등록</h2>
+          <form id="packageForm" class="stacked-form">
             <input id="studentName" type="text" placeholder="아이 이름" required>
             <input id="studentPhone" type="text" placeholder="연락처 또는 보호자 메모">
-            <button type="submit">학생 추가</button>
-          </form>
-          <div id="studentList" class="student-list"></div>
-        </div>
-
-        <div class="panel-section">
-          <h2>패키지 구매</h2>
-          <form id="packageForm" class="stacked-form">
-            <select id="packageStudent" required></select>
-            <div class="segmented" role="radiogroup" aria-label="패키지 종류">
-              <label><input type="radio" name="packageType" value="10" checked> 10회</label>
-              <label><input type="radio" name="packageType" value="20"> 20회</label>
-            </div>
+            <select id="packageProgram" required>
+              <option value="art">미술 패키지</option>
+              <option value="korean">한글</option>
+              <option value="visit">방문수업</option>
+            </select>
+            <label class="field-label">등록 횟수
+              <input id="packageTotal" type="number" min="1" step="1" value="10" required>
+            </label>
             <label class="field-label">구매 날짜
               <input id="purchaseDate" type="date" required>
             </label>
-            <button type="submit">패키지 추가</button>
+            <button type="submit">아이와 패키지 등록</button>
           </form>
+          <div id="studentList" class="student-list"></div>
         </div>
 
         <div class="panel-section">
@@ -146,8 +142,12 @@
           <div id="lessonList" class="lesson-list"></div>
         </div>
         <div class="panel-section attendance-list-section">
-          <h2>한글/방문 출결</h2>
-          <div id="attendanceList" class="attendance-list"></div>
+          <h2>한글 수업 진행</h2>
+          <div id="koreanAttendanceList" class="attendance-list"></div>
+        </div>
+        <div class="panel-section attendance-list-section">
+          <h2>방문수업 진행</h2>
+          <div id="visitAttendanceList" class="attendance-list"></div>
         </div>
       </aside>
     </section>

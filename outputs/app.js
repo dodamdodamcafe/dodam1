@@ -13,18 +13,19 @@ let autoSaveTimer = null;
 let autoSaveStatusTimer = null;
 let serverSaveAvailable = false;
 let serverSaveTimer = null;
+let preferredStudentId = "";
 
 const $ = (selector) => document.querySelector(selector);
 const emptyTemplate = $("#emptyTemplate");
 
 const els = {
-  studentForm: $("#studentForm"),
   packageForm: $("#packageForm"),
   lessonForm: $("#lessonForm"),
   attendanceForm: $("#attendanceForm"),
   studentName: $("#studentName"),
   studentPhone: $("#studentPhone"),
-  packageStudent: $("#packageStudent"),
+  packageProgram: $("#packageProgram"),
+  packageTotal: $("#packageTotal"),
   lessonStudent: $("#lessonStudent"),
   attendanceStudent: $("#attendanceStudent"),
   attendanceProgram: $("#attendanceProgram"),
@@ -48,7 +49,8 @@ const els = {
   monthTitle: $("#monthTitle"),
   packageStatus: $("#packageStatus"),
   lessonList: $("#lessonList"),
-  attendanceList: $("#attendanceList"),
+  koreanAttendanceList: $("#koreanAttendanceList"),
+  visitAttendanceList: $("#visitAttendanceList"),
   studentCount: $("#studentCount"),
   monthLessonCount: $("#monthLessonCount"),
   packageLessonCount: $("#packageLessonCount"),
@@ -81,9 +83,19 @@ function loadState() {
 function normalizeState(data) {
   return {
     students: Array.isArray(data?.students) ? data.students : [],
-    packages: Array.isArray(data?.packages) ? data.packages : [],
+    packages: Array.isArray(data?.packages) ? data.packages.map(normalizePackage) : [],
     lessons: Array.isArray(data?.lessons) ? data.lessons : [],
     attendance: Array.isArray(data?.attendance) ? data.attendance : [],
+  };
+}
+
+function normalizePackage(pkg) {
+  const total = Number(pkg?.total || pkg?.type || 0);
+  return {
+    ...pkg,
+    program: pkg?.program || "art",
+    total,
+    type: total,
   };
 }
 
@@ -155,18 +167,6 @@ function initDefaults() {
 }
 
 function bindEvents() {
-  els.studentForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    state.students.push({
-      id: makeId(),
-      name: els.studentName.value.trim(),
-      phone: els.studentPhone.value.trim(),
-    });
-    els.studentForm.reset();
-    saveState();
-    render();
-  });
-
   els.attendanceForm.addEventListener("submit", (event) => {
     event.preventDefault();
     state.attendance.push({
@@ -186,15 +186,30 @@ function bindEvents() {
 
   els.packageForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    const type = Number(new FormData(els.packageForm).get("packageType"));
+    const name = els.studentName.value.trim();
+    const phone = els.studentPhone.value.trim();
+    let student = state.students.find((item) => item.name.trim() === name);
+    if (!student) {
+      student = { id: makeId(), name, phone };
+      state.students.push(student);
+    } else if (phone) {
+      student.phone = phone;
+    }
+    const total = Number(els.packageTotal.value);
     state.packages.push({
       id: makeId(),
-      studentId: els.packageStudent.value,
-      type,
-      total: type,
+      studentId: student.id,
+      program: els.packageProgram.value,
+      type: total,
+      total,
       purchaseDate: els.purchaseDate.value,
       createdAt: Date.now(),
     });
+    preferredStudentId = student.id;
+    els.studentName.value = "";
+    els.studentPhone.value = "";
+    els.packageProgram.value = "art";
+    els.packageTotal.value = "10";
     els.purchaseDate.value = toISODate(today);
     saveState();
     render();
@@ -365,10 +380,9 @@ function render() {
 }
 
 function renderSelects() {
-  const selectedPackageStudent = els.packageStudent.value;
-  const selectedLessonStudent = els.lessonStudent.value;
-  const selectedMessageStudent = els.messageStudent.value;
-  const selectedAttendanceStudent = els.attendanceStudent.value;
+  const selectedLessonStudent = preferredStudentId || els.lessonStudent.value;
+  const selectedMessageStudent = preferredStudentId || els.messageStudent.value;
+  const selectedAttendanceStudent = preferredStudentId || els.attendanceStudent.value;
   const options = state.students
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, "ko"))
@@ -376,19 +390,16 @@ function renderSelects() {
     .join("");
 
   const empty = '<option value="" disabled selected>학생을 먼저 등록하세요</option>';
-  els.packageStudent.innerHTML = options || empty;
   els.lessonStudent.innerHTML = options || empty;
   els.attendanceStudent.innerHTML = options || empty;
   els.messageStudent.innerHTML = options || empty;
-  restoreSelectValue(els.packageStudent, selectedPackageStudent);
   restoreSelectValue(els.lessonStudent, selectedLessonStudent);
   restoreSelectValue(els.attendanceStudent, selectedAttendanceStudent);
   restoreSelectValue(els.messageStudent, selectedMessageStudent);
-  els.packageStudent.disabled = state.students.length === 0;
+  preferredStudentId = "";
   els.lessonStudent.disabled = state.students.length === 0;
   els.attendanceStudent.disabled = state.students.length === 0;
   els.messageStudent.disabled = state.students.length === 0;
-  els.packageForm.querySelector("button").disabled = state.students.length === 0;
   els.lessonForm.querySelector("button").disabled = state.students.length === 0;
   els.attendanceForm.querySelector("button").disabled = state.students.length === 0;
   els.copyMessageBtn.disabled = state.students.length === 0;
@@ -533,7 +544,7 @@ function renderPackageStatus(computed) {
   header.className = "package-row header";
   header.innerHTML = `
     <span>이름</span>
-    <span>패키지</span>
+    <span>수업</span>
     <span>잔여</span>
     <span>사용기한</span>
     <span>관리</span>
@@ -548,9 +559,9 @@ function renderPackageStatus(computed) {
     row.className = `package-row ${status.className}`;
     row.innerHTML = `
       <b>${escapeHTML(student?.name || "삭제된 학생")}</b>
-      <span>${pkg.total}회권</span>
+      <span>${getProgramName(pkg.program)}</span>
       <span>${Math.max(0, remaining)} / ${pkg.total}회</span>
-      <span class="meta">${pkg.expiryDate ? formatDate(pkg.expiryDate) : "첫 수업 후"}</span>
+      <span class="meta">${getPackageExpiryText(pkg)}</span>
       <button class="delete-btn" type="button" data-delete-package="${pkg.id}">삭제</button>
       <span class="meta">${status.label} · 구매 ${formatDate(pkg.purchaseDate)}</span>
       <span class="meta">사용 ${pkg.used}회</span>
@@ -669,10 +680,40 @@ function renderLessonList(computed) {
 }
 
 function renderAttendanceList() {
-  els.attendanceList.innerHTML = "";
-  const records = getMonthAttendance().sort(sortAttendance);
+  renderAttendanceSection("korean", els.koreanAttendanceList);
+  renderAttendanceSection("visit", els.visitAttendanceList);
+}
+
+function renderAttendanceSection(program, container) {
+  const computed = computePackages();
+  container.innerHTML = "";
+  const packages = computed.packages.filter((pkg) => pkg.program === program);
+  const records = getMonthAttendance(program).sort(sortAttendance);
+  if (packages.length === 0 && records.length === 0) {
+    container.appendChild(emptyTemplate.content.cloneNode(true));
+    return;
+  }
+
+  packages.forEach((pkg) => {
+    const student = findStudent(pkg.studentId);
+    const remaining = Math.max(0, pkg.total - pkg.used);
+    const card = document.createElement("article");
+    card.className = "attendance-package-row";
+    card.innerHTML = `
+      <div>
+        <b>${escapeHTML(student?.name || "삭제된 학생")}</b>
+        <div class="meta">사용 ${pkg.used}회 · 잔여 ${remaining}회</div>
+      </div>
+      <span class="badge ${remaining <= 1 ? "warning" : ""}">${pkg.total}회권</span>
+    `;
+    container.appendChild(card);
+  });
+
   if (records.length === 0) {
-    els.attendanceList.appendChild(emptyTemplate.content.cloneNode(true));
+    const empty = document.createElement("div");
+    empty.className = "empty-state compact-empty";
+    empty.textContent = "이번 달 진행 기록이 없습니다.";
+    container.appendChild(empty);
     return;
   }
 
@@ -694,10 +735,10 @@ function renderAttendanceList() {
         <button class="delete-btn" type="button" data-delete-attendance="${record.id}">삭제</button>
       </div>
     `;
-    els.attendanceList.appendChild(row);
+    container.appendChild(row);
   });
 
-  els.attendanceList.querySelectorAll("[data-makeup-attendance]").forEach((button) => {
+  container.querySelectorAll("[data-makeup-attendance]").forEach((button) => {
     button.addEventListener("click", () => {
       const record = state.attendance.find((item) => item.id === button.dataset.makeupAttendance);
       if (record) {
@@ -708,7 +749,7 @@ function renderAttendanceList() {
     });
   });
 
-  els.attendanceList.querySelectorAll("[data-delete-attendance]").forEach((button) => {
+  container.querySelectorAll("[data-delete-attendance]").forEach((button) => {
     button.addEventListener("click", () => {
       deleteById(state.attendance, button.dataset.deleteAttendance);
       saveState();
@@ -719,7 +760,7 @@ function renderAttendanceList() {
 
 function getStudentPackageSummary(studentId, computed) {
   const studentPackages = computed.packages
-    .filter((pkg) => pkg.studentId === studentId)
+    .filter((pkg) => pkg.studentId === studentId && pkg.program === "art")
     .map((pkg) => ({
       ...pkg,
       remaining: Math.max(0, pkg.total - pkg.used),
@@ -755,7 +796,11 @@ function buildMessage(student, pkg, usage) {
     return `${student.name} 학생은 현재 등록된 패키지가 없습니다.`;
   }
 
-  const expiryText = pkg.expiryDate ? `${formatDate(pkg.expiryDate)}까지` : "첫 수업일 기준으로 자동 계산될 예정";
+  const expiryText = pkg.expiryDate
+    ? `${formatDate(pkg.expiryDate)}까지`
+    : pkg.total === 10 || pkg.total === 20
+      ? "첫 수업일 기준으로 자동 계산될 예정"
+      : "별도 기한 없음";
   const lines = [
     `${student.name} 학생 패키지 안내드립니다.`,
     `총 ${pkg.total}회 중 ${pkg.remaining}회 남아있고, 사용기한은 ${expiryText}입니다.`,
@@ -772,11 +817,19 @@ function buildMessage(student, pkg, usage) {
   return lines.join("\n");
 }
 
+function getPackageExpiryText(pkg) {
+  if (pkg.program !== "art") return "기한 없음";
+  if (pkg.expiryDate) return formatDate(pkg.expiryDate);
+  if (pkg.total === 10 || pkg.total === 20) return "첫 수업 후";
+  return "기한 없음";
+}
+
 function computePackages() {
   const packages = state.packages
-    .map((pkg) => ({ ...pkg, used: 0, firstClassDate: "", expiryDate: "" }))
+    .map((pkg) => ({ ...normalizePackage(pkg), used: 0, firstClassDate: "", expiryDate: "" }))
     .sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate) || a.createdAt - b.createdAt);
   const lessonAllocation = new Map();
+  const attendanceAllocation = new Map();
   const packageLessons = state.lessons
     .filter((lesson) => lesson.kind === "package")
     .slice()
@@ -785,22 +838,44 @@ function computePackages() {
   packageLessons.forEach((lesson) => {
     const availablePackage = packages.find((pkg) => {
       if (pkg.studentId !== lesson.studentId) return false;
+      if (pkg.program !== "art") return false;
       if (lesson.date < pkg.purchaseDate) return false;
       if (pkg.used >= pkg.total) return false;
       if (!pkg.firstClassDate) return true;
-      return lesson.date <= pkg.expiryDate;
+      return !pkg.expiryDate || lesson.date <= pkg.expiryDate;
     });
 
     if (!availablePackage) return;
     if (!availablePackage.firstClassDate) {
       availablePackage.firstClassDate = lesson.date;
-      availablePackage.expiryDate = toISODate(addMonths(parseISO(lesson.date), availablePackage.total === 10 ? 3 : 6));
+      availablePackage.expiryDate = getArtExpiryDate(lesson.date, availablePackage.total);
     }
     availablePackage.used += 1;
     lessonAllocation.set(lesson.id, availablePackage.id);
   });
 
-  return { packages, lessonAllocation };
+  const attendanceUsage = state.attendance
+    .filter((record) => record.status === "present" || record.makeupDone)
+    .slice()
+    .sort(sortAttendance);
+
+  attendanceUsage.forEach((record) => {
+    const availablePackage = packages.find((pkg) => {
+      if (pkg.studentId !== record.studentId) return false;
+      if (pkg.program !== record.program) return false;
+      if (record.date < pkg.purchaseDate) return false;
+      return pkg.used < pkg.total;
+    });
+
+    if (!availablePackage) return;
+    if (!availablePackage.firstClassDate) {
+      availablePackage.firstClassDate = record.date;
+    }
+    availablePackage.used += 1;
+    attendanceAllocation.set(record.id, availablePackage.id);
+  });
+
+  return { packages, lessonAllocation, attendanceAllocation };
 }
 
 function getPackageStatus(pkg, remaining) {
@@ -818,6 +893,12 @@ function getPackageStatus(pkg, remaining) {
     return { label: "잔여 임박", className: "low", badgeClass: "warning" };
   }
   return { label: "사용 가능", className: "active", badgeClass: "" };
+}
+
+function getArtExpiryDate(firstClassDate, total) {
+  if (total === 10) return toISODate(addMonths(parseISO(firstClassDate), 3));
+  if (total === 20) return toISODate(addMonths(parseISO(firstClassDate), 6));
+  return "";
 }
 
 function groupLessonsByDate(computed) {
@@ -839,10 +920,11 @@ function getMonthLessons() {
   });
 }
 
-function getMonthAttendance() {
+function getMonthAttendance(program) {
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();
   return state.attendance.filter((record) => {
+    if (program && record.program !== program) return false;
     const date = parseISO(record.date);
     return date.getFullYear() === year && date.getMonth() === month;
   });

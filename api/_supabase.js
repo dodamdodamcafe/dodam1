@@ -20,7 +20,7 @@ function validateData(data) {
     throw new Error("Invalid data");
   }
 
-  for (const key of ["students", "packages", "lessons"]) {
+  for (const key of ["students", "packages", "lessons", "attendance"]) {
     if (!Array.isArray(data[key])) {
       throw new Error(`Invalid ${key}`);
     }
