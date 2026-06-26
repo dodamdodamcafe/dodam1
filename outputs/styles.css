@@ -1,20 +1,21 @@
 :root {
   color-scheme: light;
-  --ink: #2f3140;
-  --muted: #71758a;
-  --line: #eadfeb;
+  --ink: #243044;
+  --muted: #667085;
+  --line: #dce6ef;
   --paper: #ffffff;
-  --wash: #fff7fb;
-  --brand: #8f7bea;
-  --brand-dark: #7462d3;
-  --mint: #65bfa4;
-  --gold: #e3a84f;
-  --danger: #df6f7d;
-  --pink: #ffdcea;
-  --lilac: #ebe4ff;
-  --peach: #ffe8d3;
-  --sky: #dff4ff;
-  --shadow: 0 14px 40px rgba(142, 123, 160, 0.13);
+  --wash: #f6fbff;
+  --brand: #2f80ed;
+  --brand-dark: #1f67c7;
+  --mint: #00a887;
+  --gold: #f5b700;
+  --danger: #e64b5d;
+  --coral: #ff7a59;
+  --blue-soft: #e8f3ff;
+  --mint-soft: #e7fbf5;
+  --yellow-soft: #fff6d8;
+  --coral-soft: #fff0ea;
+  --shadow: 0 14px 34px rgba(36, 48, 68, 0.1);
 }
 
 * {
@@ -26,7 +27,7 @@ body {
   min-width: 320px;
   color: var(--ink);
   background:
-    linear-gradient(135deg, rgba(255, 220, 234, 0.7), rgba(223, 244, 255, 0.65) 46%, rgba(235, 228, 255, 0.7)),
+    linear-gradient(135deg, rgba(232, 243, 255, 0.92), rgba(231, 251, 245, 0.84) 46%, rgba(255, 246, 216, 0.78)),
     var(--wash);
   font-family: Inter, Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
 }
@@ -61,12 +62,12 @@ button:hover,
 button.ghost,
 .file-action.ghost {
   color: var(--ink);
-  background: #f1eafb;
+  background: #e8f3ff;
 }
 
 button.ghost:hover,
 .file-action.ghost:hover {
-  background: #e7dcfa;
+  background: #d8ebff;
 }
 
 button.danger {
@@ -82,7 +83,7 @@ textarea {
   border-radius: 8px;
   padding: 0 12px;
   color: var(--ink);
-  background: #fffafd;
+  background: #fff;
 }
 
 input:focus,
@@ -114,7 +115,7 @@ textarea {
 
 .eyebrow {
   margin: 0 0 4px;
-  color: var(--brand);
+  color: var(--coral);
   font-size: 13px;
   font-weight: 700;
 }
@@ -324,7 +325,7 @@ h2 {
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
-  background: #fff3f9;
+  background: var(--blue-soft);
 }
 
 .day-cell {
@@ -364,18 +365,18 @@ h2 {
   border-left: 4px solid var(--mint);
   border-radius: 6px;
   padding: 6px 7px;
-  background: #ebfaf5;
+  background: var(--mint-soft);
   font-size: 12px;
 }
 
 .lesson-chip.oneday {
   border-color: var(--gold);
-  background: #fff2df;
+  background: var(--yellow-soft);
 }
 
 .lesson-chip.invalid {
   border-color: var(--danger);
-  background: #fff0f3;
+  background: #fff0f2;
 }
 
 .lesson-chip b,
@@ -405,7 +406,7 @@ h2 {
   justify-items: center;
   border-radius: 8px;
   color: #fff;
-  background: linear-gradient(145deg, #8f7bea, #65bfa4);
+  background: linear-gradient(145deg, var(--brand), var(--mint));
 }
 
 .mobile-date b {
@@ -500,15 +501,15 @@ h2 {
 }
 
 .package-group.art {
-  background: linear-gradient(180deg, rgba(255, 220, 234, 0.72), rgba(255, 255, 255, 0.88));
+  background: linear-gradient(180deg, rgba(255, 240, 234, 0.92), rgba(255, 255, 255, 0.96));
 }
 
 .package-group.korean {
-  background: linear-gradient(180deg, rgba(223, 244, 255, 0.8), rgba(255, 255, 255, 0.9));
+  background: linear-gradient(180deg, rgba(232, 243, 255, 0.95), rgba(255, 255, 255, 0.96));
 }
 
 .package-group.visit {
-  background: linear-gradient(180deg, rgba(255, 232, 211, 0.82), rgba(255, 255, 255, 0.9));
+  background: linear-gradient(180deg, rgba(231, 251, 245, 0.95), rgba(255, 255, 255, 0.96));
 }
 
 .package-group-title {
@@ -544,6 +545,16 @@ h2 {
   border-color: #f1c76d;
   background: #fff8dd;
   box-shadow: 0 8px 24px rgba(227, 168, 79, 0.15);
+}
+
+.package-row.expired {
+  border: 2px solid var(--danger);
+  background: #fff7f8;
+}
+
+.package-row.expired.low-remaining {
+  border-color: var(--danger);
+  background: linear-gradient(90deg, #fff7f8, #fff8dd);
 }
 
 .package-row.header {
@@ -651,6 +662,8 @@ h2 {
 
 .row-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-end;
 }
 

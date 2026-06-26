@@ -14,6 +14,8 @@ let autoSaveStatusTimer = null;
 let serverSaveAvailable = false;
 let serverSaveTimer = null;
 let preferredStudentId = "";
+let editingLessonId = "";
+let editingAttendanceId = "";
 
 const $ = (selector) => document.querySelector(selector);
 const emptyTemplate = $("#emptyTemplate");
@@ -169,16 +171,24 @@ function initDefaults() {
 function bindEvents() {
   els.attendanceForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    state.attendance.push({
-      id: makeId(),
+    const record = {
+      id: editingAttendanceId || makeId(),
       studentId: els.attendanceStudent.value,
       program: els.attendanceProgram.value,
       date: els.attendanceDate.value,
       status: els.attendanceStatus.value,
       memo: els.attendanceMemo.value.trim(),
-      makeupDone: false,
-      createdAt: Date.now(),
-    });
+      makeupDone: editingAttendanceId ? Boolean(state.attendance.find((item) => item.id === editingAttendanceId)?.makeupDone) : false,
+      createdAt: editingAttendanceId ? state.attendance.find((item) => item.id === editingAttendanceId)?.createdAt || Date.now() : Date.now(),
+    };
+    if (editingAttendanceId) {
+      const index = state.attendance.findIndex((item) => item.id === editingAttendanceId);
+      if (index >= 0) state.attendance[index] = record;
+      editingAttendanceId = "";
+      els.attendanceForm.querySelector("button").textContent = "출결 추가";
+    } else {
+      state.attendance.push(record);
+    }
     els.attendanceMemo.value = "";
     saveState();
     render();
@@ -217,15 +227,23 @@ function bindEvents() {
 
   els.lessonForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    state.lessons.push({
-      id: makeId(),
+    const lesson = {
+      id: editingLessonId || makeId(),
       studentId: els.lessonStudent.value,
       date: els.lessonDate.value,
       time: els.lessonTime.value,
       kind: els.lessonKind.value,
       memo: els.lessonMemo.value.trim(),
-      createdAt: Date.now(),
-    });
+      createdAt: editingLessonId ? state.lessons.find((item) => item.id === editingLessonId)?.createdAt || Date.now() : Date.now(),
+    };
+    if (editingLessonId) {
+      const index = state.lessons.findIndex((item) => item.id === editingLessonId);
+      if (index >= 0) state.lessons[index] = lesson;
+      editingLessonId = "";
+      els.lessonForm.querySelector("button").textContent = "예약 추가";
+    } else {
+      state.lessons.push(lesson);
+    }
     visibleMonth = monthFromISO(els.lessonDate.value);
     els.lessonMemo.value = "";
     saveState();
@@ -687,10 +705,17 @@ function renderLessonList(computed) {
       <div class="meta">${formatDate(lesson.date)} ${lesson.time || "시간 미정"}</div>
       ${lesson.memo ? `<div class="meta">${escapeHTML(lesson.memo)}</div>` : ""}
       <div class="row-actions">
+        <button class="ghost small-btn" type="button" data-edit-lesson="${lesson.id}">수정</button>
         <button class="delete-btn" type="button" data-delete-lesson="${lesson.id}">삭제</button>
       </div>
     `;
     els.lessonList.appendChild(row);
+  });
+
+  els.lessonList.querySelectorAll("[data-edit-lesson]").forEach((button) => {
+    button.addEventListener("click", () => {
+      startEditLesson(button.dataset.editLesson);
+    });
   });
 
   els.lessonList.querySelectorAll("[data-delete-lesson]").forEach((button) => {
@@ -754,6 +779,7 @@ function renderAttendanceSection(program, container) {
       <div class="meta">${formatDate(record.date)}</div>
       ${record.memo ? `<div class="meta">${escapeHTML(record.memo)}</div>` : ""}
       <div class="row-actions">
+        <button class="ghost small-btn" type="button" data-edit-attendance="${record.id}">수정</button>
         ${record.status === "absent" && !record.makeupDone ? `<button class="ghost small-btn" type="button" data-makeup-attendance="${record.id}">보강 완료</button>` : ""}
         <button class="delete-btn" type="button" data-delete-attendance="${record.id}">삭제</button>
       </div>
@@ -772,6 +798,12 @@ function renderAttendanceSection(program, container) {
     });
   });
 
+  container.querySelectorAll("[data-edit-attendance]").forEach((button) => {
+    button.addEventListener("click", () => {
+      startEditAttendance(button.dataset.editAttendance);
+    });
+  });
+
   container.querySelectorAll("[data-delete-attendance]").forEach((button) => {
     button.addEventListener("click", () => {
       deleteById(state.attendance, button.dataset.deleteAttendance);
@@ -779,6 +811,36 @@ function renderAttendanceSection(program, container) {
       render();
     });
   });
+}
+
+function startEditLesson(id) {
+  const lesson = state.lessons.find((item) => item.id === id);
+  if (!lesson) return;
+  editingLessonId = id;
+  preferredStudentId = lesson.studentId;
+  renderSelects();
+  els.lessonStudent.value = lesson.studentId;
+  els.lessonDate.value = lesson.date;
+  els.lessonTime.value = lesson.time || "10:00";
+  els.lessonKind.value = lesson.kind;
+  els.lessonMemo.value = lesson.memo || "";
+  els.lessonForm.querySelector("button").textContent = "예약 수정 저장";
+  els.lessonForm.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function startEditAttendance(id) {
+  const record = state.attendance.find((item) => item.id === id);
+  if (!record) return;
+  editingAttendanceId = id;
+  preferredStudentId = record.studentId;
+  renderSelects();
+  els.attendanceStudent.value = record.studentId;
+  els.attendanceDate.value = record.date;
+  els.attendanceProgram.value = record.program;
+  els.attendanceStatus.value = record.status;
+  els.attendanceMemo.value = record.memo || "";
+  els.attendanceForm.querySelector("button").textContent = "출결 수정 저장";
+  els.attendanceForm.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function getStudentPackageSummary(studentId, computed) {
@@ -789,11 +851,9 @@ function getStudentPackageSummary(studentId, computed) {
       remaining: Math.max(0, pkg.total - pkg.used),
     }));
 
-  const currentDate = toISODate(today);
   const usable = studentPackages.find((pkg) => {
     if (pkg.remaining <= 0) return false;
-    if (!pkg.expiryDate) return true;
-    return pkg.expiryDate >= currentDate;
+    return true;
   });
 
   if (usable) return usable;
@@ -864,8 +924,7 @@ function computePackages() {
       if (pkg.program !== "art") return false;
       if (lesson.date < pkg.purchaseDate) return false;
       if (pkg.used >= pkg.total) return false;
-      if (!pkg.firstClassDate) return true;
-      return !pkg.expiryDate || lesson.date <= pkg.expiryDate;
+      return true;
     });
 
     if (!availablePackage) return;
@@ -903,11 +962,11 @@ function computePackages() {
 
 function getPackageStatus(pkg, remaining) {
   const currentDate = toISODate(today);
-  if (pkg.expiryDate && pkg.expiryDate < currentDate) {
-    return { label: "기한 만료", className: "expired", badgeClass: "danger" };
-  }
   if (remaining <= 0) {
     return { label: "사용 완료", className: "done", badgeClass: "danger" };
+  }
+  if (pkg.expiryDate && pkg.expiryDate < currentDate) {
+    return { label: "기한 경과", className: "expired", badgeClass: "danger" };
   }
   if (!pkg.firstClassDate) {
     return { label: "대기", className: "waiting", badgeClass: "warning" };
