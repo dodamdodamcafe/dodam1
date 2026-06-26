@@ -298,6 +298,11 @@ h2 {
   border-left: 1px solid var(--line);
 }
 
+.mobile-schedule-list,
+.calendar-toggle {
+  display: none;
+}
+
 .weekday,
 .day-cell {
   border-right: 1px solid var(--line);
@@ -376,10 +381,45 @@ h2 {
   color: var(--muted);
 }
 
+.mobile-schedule-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.mobile-date {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--brand);
+}
+
+.mobile-date b {
+  font-size: 18px;
+}
+
+.mobile-date span {
+  font-size: 12px;
+}
+
+.mobile-schedule-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
 .status-list,
 .lesson-list,
 .student-list,
-.usage-list {
+.usage-list,
+.attendance-list {
   display: grid;
   gap: 10px;
   margin-top: 12px;
@@ -388,7 +428,8 @@ h2 {
 .package-card,
 .lesson-row,
 .student-row,
-.usage-row {
+.usage-row,
+.attendance-row {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
@@ -532,6 +573,11 @@ h2 {
   gap: 6px;
 }
 
+.attendance-row {
+  display: grid;
+  gap: 6px;
+}
+
 .student-row {
   display: grid;
   gap: 4px;
@@ -552,6 +598,11 @@ h2 {
 .delete-btn:hover {
   color: #fff;
   background: var(--danger);
+}
+
+.small-btn {
+  min-height: 32px;
+  padding: 0 10px;
 }
 
 .empty-state {
@@ -609,9 +660,35 @@ h2 {
     grid-column: 1 / -1;
   }
 
+  .main-panel {
+    overflow: hidden;
+  }
+
+  .mobile-schedule-list {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .calendar-toggle {
+    display: flex;
+    width: calc(100% - 24px);
+    margin: 0 12px 12px;
+  }
+
   .calendar {
+    display: none;
     overflow-x: auto;
-    grid-template-columns: repeat(7, minmax(126px, 1fr));
+    grid-template-columns: repeat(7, minmax(112px, 1fr));
+    border-top: 1px solid var(--line);
+  }
+
+  .calendar.is-open {
+    display: grid;
+  }
+
+  .day-cell {
+    min-height: 104px;
   }
 
   .package-table {

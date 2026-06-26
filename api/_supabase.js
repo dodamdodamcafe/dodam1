@@ -1,5 +1,5 @@
 const DATA_ID = "main";
-const EMPTY_DATA = { students: [], packages: [], lessons: [] };
+const EMPTY_DATA = { students: [], packages: [], lessons: [], attendance: [] };
 
 function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL;

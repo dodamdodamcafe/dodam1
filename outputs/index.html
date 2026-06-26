@@ -52,6 +52,8 @@
           <button class="icon-button" id="nextMonth" type="button" aria-label="다음 달">›</button>
           <button class="ghost today-button" id="todayBtn" type="button">오늘</button>
         </div>
+        <div id="mobileScheduleList" class="mobile-schedule-list" aria-label="모바일 일정 목록"></div>
+        <button class="ghost calendar-toggle" id="calendarToggle" type="button">월 달력 보기</button>
         <div class="calendar" id="calendar" aria-label="월별 스케줄러"></div>
       </section>
 
@@ -87,7 +89,12 @@
             <select id="lessonStudent" required></select>
             <div class="inline-fields">
               <input id="lessonDate" type="date" required>
-              <input id="lessonTime" type="time">
+              <select id="lessonTime" required>
+                <option value="10:00">10시</option>
+                <option value="11:00">11시</option>
+                <option value="12:00">12시</option>
+                <option value="13:00">13시</option>
+              </select>
             </div>
             <select id="lessonKind" required>
               <option value="package">패키지 차감</option>
@@ -95,6 +102,26 @@
             </select>
             <input id="lessonMemo" type="text" placeholder="메모">
             <button type="submit">예약 추가</button>
+          </form>
+        </div>
+
+        <div class="panel-section">
+          <h2>한글/방문수업 출결</h2>
+          <form id="attendanceForm" class="stacked-form">
+            <select id="attendanceStudent" required></select>
+            <div class="inline-fields">
+              <input id="attendanceDate" type="date" required>
+              <select id="attendanceProgram" required>
+                <option value="korean">한글</option>
+                <option value="visit">방문수업</option>
+              </select>
+            </div>
+            <select id="attendanceStatus" required>
+              <option value="present">출석</option>
+              <option value="absent">결석</option>
+            </select>
+            <input id="attendanceMemo" type="text" placeholder="메모 또는 보강 일정">
+            <button type="submit">출결 추가</button>
           </form>
         </div>
       </aside>
@@ -117,6 +144,10 @@
         <div class="panel-section">
           <h2>이번 달 예약</h2>
           <div id="lessonList" class="lesson-list"></div>
+        </div>
+        <div class="panel-section attendance-list-section">
+          <h2>한글/방문 출결</h2>
+          <div id="attendanceList" class="attendance-list"></div>
         </div>
       </aside>
     </section>

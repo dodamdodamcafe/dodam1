@@ -6,7 +6,7 @@ const SERVER_SAVE_URL = "./api/save";
 const SERVER_LOAD_URL = "./api/load";
 const today = new Date();
 
-const state = loadState();
+const state = normalizeState(loadState());
 let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 let saveFileHandle = null;
 let autoSaveTimer = null;
@@ -21,10 +21,16 @@ const els = {
   studentForm: $("#studentForm"),
   packageForm: $("#packageForm"),
   lessonForm: $("#lessonForm"),
+  attendanceForm: $("#attendanceForm"),
   studentName: $("#studentName"),
   studentPhone: $("#studentPhone"),
   packageStudent: $("#packageStudent"),
   lessonStudent: $("#lessonStudent"),
+  attendanceStudent: $("#attendanceStudent"),
+  attendanceProgram: $("#attendanceProgram"),
+  attendanceDate: $("#attendanceDate"),
+  attendanceStatus: $("#attendanceStatus"),
+  attendanceMemo: $("#attendanceMemo"),
   messageStudent: $("#messageStudent"),
   messageUsageList: $("#messageUsageList"),
   messageText: $("#messageText"),
@@ -37,9 +43,12 @@ const els = {
   lessonKind: $("#lessonKind"),
   lessonMemo: $("#lessonMemo"),
   calendar: $("#calendar"),
+  mobileScheduleList: $("#mobileScheduleList"),
+  calendarToggle: $("#calendarToggle"),
   monthTitle: $("#monthTitle"),
   packageStatus: $("#packageStatus"),
   lessonList: $("#lessonList"),
+  attendanceList: $("#attendanceList"),
   studentCount: $("#studentCount"),
   monthLessonCount: $("#monthLessonCount"),
   packageLessonCount: $("#packageLessonCount"),
@@ -66,7 +75,16 @@ function loadState() {
   } catch {
     localStorage.removeItem(STORAGE_KEY);
   }
-  return { students: [], packages: [], lessons: [] };
+  return { students: [], packages: [], lessons: [], attendance: [] };
+}
+
+function normalizeState(data) {
+  return {
+    students: Array.isArray(data?.students) ? data.students : [],
+    packages: Array.isArray(data?.packages) ? data.packages : [],
+    lessons: Array.isArray(data?.lessons) ? data.lessons : [],
+    attendance: Array.isArray(data?.attendance) ? data.attendance : [],
+  };
 }
 
 function saveState() {
@@ -88,10 +106,12 @@ async function initServerState() {
     if (!response.ok) return;
     const data = await response.json();
     serverSaveAvailable = true;
-    if (data && Array.isArray(data.students) && Array.isArray(data.packages) && Array.isArray(data.lessons)) {
-      state.students = data.students;
-      state.packages = data.packages;
-      state.lessons = data.lessons;
+    const normalized = normalizeState(data);
+    if (Array.isArray(normalized.students) && Array.isArray(normalized.packages) && Array.isArray(normalized.lessons)) {
+      state.students = normalized.students;
+      state.packages = normalized.packages;
+      state.lessons = normalized.lessons;
+      state.attendance = normalized.attendance;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       render();
     }
@@ -131,6 +151,7 @@ function initDefaults() {
   const isoToday = toISODate(today);
   els.purchaseDate.value = isoToday;
   els.lessonDate.value = isoToday;
+  els.attendanceDate.value = isoToday;
 }
 
 function bindEvents() {
@@ -142,6 +163,23 @@ function bindEvents() {
       phone: els.studentPhone.value.trim(),
     });
     els.studentForm.reset();
+    saveState();
+    render();
+  });
+
+  els.attendanceForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    state.attendance.push({
+      id: makeId(),
+      studentId: els.attendanceStudent.value,
+      program: els.attendanceProgram.value,
+      date: els.attendanceDate.value,
+      status: els.attendanceStatus.value,
+      memo: els.attendanceMemo.value.trim(),
+      makeupDone: false,
+      createdAt: Date.now(),
+    });
+    els.attendanceMemo.value = "";
     saveState();
     render();
   });
@@ -194,6 +232,10 @@ function bindEvents() {
     els.lessonDate.value = toISODate(today);
     render();
   });
+  els.calendarToggle.addEventListener("click", () => {
+    els.calendar.classList.toggle("is-open");
+    els.calendarToggle.textContent = els.calendar.classList.contains("is-open") ? "월 달력 닫기" : "월 달력 보기";
+  });
 
   els.exportBtn.addEventListener("click", exportData);
   els.connectSaveFileBtn.addEventListener("click", connectAutoSaveFile);
@@ -208,6 +250,7 @@ function bindEvents() {
     state.students = [];
     state.packages = [];
     state.lessons = [];
+    state.attendance = [];
     saveState();
     render();
   });
@@ -313,16 +356,19 @@ function render() {
   renderSelects();
   renderStudentList();
   renderSummary(computed);
+  renderMobileScheduleList(computed);
   renderCalendar(computed);
   renderPackageStatus(computed);
   renderMessage(computed);
   renderLessonList(computed);
+  renderAttendanceList();
 }
 
 function renderSelects() {
   const selectedPackageStudent = els.packageStudent.value;
   const selectedLessonStudent = els.lessonStudent.value;
   const selectedMessageStudent = els.messageStudent.value;
+  const selectedAttendanceStudent = els.attendanceStudent.value;
   const options = state.students
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, "ko"))
@@ -332,15 +378,19 @@ function renderSelects() {
   const empty = '<option value="" disabled selected>학생을 먼저 등록하세요</option>';
   els.packageStudent.innerHTML = options || empty;
   els.lessonStudent.innerHTML = options || empty;
+  els.attendanceStudent.innerHTML = options || empty;
   els.messageStudent.innerHTML = options || empty;
   restoreSelectValue(els.packageStudent, selectedPackageStudent);
   restoreSelectValue(els.lessonStudent, selectedLessonStudent);
+  restoreSelectValue(els.attendanceStudent, selectedAttendanceStudent);
   restoreSelectValue(els.messageStudent, selectedMessageStudent);
   els.packageStudent.disabled = state.students.length === 0;
   els.lessonStudent.disabled = state.students.length === 0;
+  els.attendanceStudent.disabled = state.students.length === 0;
   els.messageStudent.disabled = state.students.length === 0;
   els.packageForm.querySelector("button").disabled = state.students.length === 0;
   els.lessonForm.querySelector("button").disabled = state.students.length === 0;
+  els.attendanceForm.querySelector("button").disabled = state.students.length === 0;
   els.copyMessageBtn.disabled = state.students.length === 0;
 }
 
@@ -373,6 +423,7 @@ function renderStudentList() {
       deleteById(state.students, id);
       state.packages = state.packages.filter((pkg) => pkg.studentId !== id);
       state.lessons = state.lessons.filter((lesson) => lesson.studentId !== id);
+      state.attendance = state.attendance.filter((record) => record.studentId !== id);
       saveState();
       render();
     });
@@ -385,6 +436,37 @@ function renderSummary(computed) {
   els.monthLessonCount.textContent = `${monthLessons.length}회`;
   els.packageLessonCount.textContent = `${monthLessons.filter((lesson) => lesson.kind === "package").length}회`;
   els.onedayLessonCount.textContent = `${monthLessons.filter((lesson) => lesson.kind === "oneday").length}회`;
+}
+
+function renderMobileScheduleList(computed) {
+  els.mobileScheduleList.innerHTML = "";
+  const lessons = getMonthLessons().sort(sortLessons);
+  if (lessons.length === 0) {
+    els.mobileScheduleList.appendChild(emptyTemplate.content.cloneNode(true));
+    return;
+  }
+
+  lessons.forEach((lesson) => {
+    const student = findStudent(lesson.studentId);
+    const allocation = computed.lessonAllocation.get(lesson.id);
+    const row = document.createElement("article");
+    row.className = "mobile-schedule-row";
+    const kindText = lesson.kind === "oneday" ? "원데이" : allocation ? "패키지" : "패키지 없음";
+    row.innerHTML = `
+      <div class="mobile-date">
+        <b>${formatMonthDay(lesson.date)}</b>
+        <span>${getWeekdayName(lesson.date)}</span>
+      </div>
+      <div class="mobile-schedule-body">
+        <div class="lesson-head">
+          <b>${escapeHTML(student?.name || "삭제된 학생")}</b>
+          <span class="badge ${lesson.kind === "oneday" ? "warning" : allocation ? "" : "danger"}">${kindText}</span>
+        </div>
+        <div class="meta">${lesson.time || "시간 미정"}${lesson.memo ? ` · ${escapeHTML(lesson.memo)}` : ""}</div>
+      </div>
+    `;
+    els.mobileScheduleList.appendChild(row);
+  });
 }
 
 function renderCalendar(computed) {
@@ -586,6 +668,55 @@ function renderLessonList(computed) {
   });
 }
 
+function renderAttendanceList() {
+  els.attendanceList.innerHTML = "";
+  const records = getMonthAttendance().sort(sortAttendance);
+  if (records.length === 0) {
+    els.attendanceList.appendChild(emptyTemplate.content.cloneNode(true));
+    return;
+  }
+
+  records.forEach((record) => {
+    const student = findStudent(record.studentId);
+    const row = document.createElement("article");
+    row.className = "attendance-row";
+    const statusText = getAttendanceStatusText(record);
+    const statusClass = record.status === "absent" && !record.makeupDone ? "danger" : record.makeupDone ? "warning" : "";
+    row.innerHTML = `
+      <div class="lesson-head">
+        <b>${escapeHTML(student?.name || "삭제된 학생")} · ${getProgramName(record.program)}</b>
+        <span class="badge ${statusClass}">${statusText}</span>
+      </div>
+      <div class="meta">${formatDate(record.date)}</div>
+      ${record.memo ? `<div class="meta">${escapeHTML(record.memo)}</div>` : ""}
+      <div class="row-actions">
+        ${record.status === "absent" && !record.makeupDone ? `<button class="ghost small-btn" type="button" data-makeup-attendance="${record.id}">보강 완료</button>` : ""}
+        <button class="delete-btn" type="button" data-delete-attendance="${record.id}">삭제</button>
+      </div>
+    `;
+    els.attendanceList.appendChild(row);
+  });
+
+  els.attendanceList.querySelectorAll("[data-makeup-attendance]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const record = state.attendance.find((item) => item.id === button.dataset.makeupAttendance);
+      if (record) {
+        record.makeupDone = true;
+        saveState();
+        render();
+      }
+    });
+  });
+
+  els.attendanceList.querySelectorAll("[data-delete-attendance]").forEach((button) => {
+    button.addEventListener("click", () => {
+      deleteById(state.attendance, button.dataset.deleteAttendance);
+      saveState();
+      render();
+    });
+  });
+}
+
 function getStudentPackageSummary(studentId, computed) {
   const studentPackages = computed.packages
     .filter((pkg) => pkg.studentId === studentId)
@@ -708,6 +839,15 @@ function getMonthLessons() {
   });
 }
 
+function getMonthAttendance() {
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+  return state.attendance.filter((record) => {
+    const date = parseISO(record.date);
+    return date.getFullYear() === year && date.getMonth() === month;
+  });
+}
+
 function getMonthGridLessons() {
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();
@@ -741,9 +881,11 @@ function importData(event) {
       if (!Array.isArray(imported.students) || !Array.isArray(imported.packages) || !Array.isArray(imported.lessons)) {
         throw new Error("Invalid data");
       }
-      state.students = imported.students;
-      state.packages = imported.packages;
-      state.lessons = imported.lessons;
+      const normalized = normalizeState(imported);
+      state.students = normalized.students;
+      state.packages = normalized.packages;
+      state.lessons = normalized.lessons;
+      state.attendance = normalized.attendance;
       saveState();
       render();
     } catch {
@@ -805,6 +947,10 @@ function sortLessons(a, b) {
   return a.date.localeCompare(b.date) || (a.time || "").localeCompare(b.time || "") || a.createdAt - b.createdAt;
 }
 
+function sortAttendance(a, b) {
+  return a.date.localeCompare(b.date) || a.createdAt - b.createdAt;
+}
+
 function monthFromISO(iso) {
   const date = parseISO(iso);
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -834,6 +980,24 @@ function formatDate(iso) {
   if (!iso) return "";
   const [year, month, day] = iso.split("-");
   return `${year}.${month}.${day}`;
+}
+
+function getProgramName(program) {
+  return program === "visit" ? "방문수업" : "한글";
+}
+
+function getAttendanceStatusText(record) {
+  if (record.status === "absent" && record.makeupDone) return "보강 완료";
+  return record.status === "absent" ? "결석" : "출석";
+}
+
+function formatMonthDay(iso) {
+  const [, month, day] = iso.split("-");
+  return `${Number(month)}/${Number(day)}`;
+}
+
+function getWeekdayName(iso) {
+  return ["일", "월", "화", "수", "목", "금", "토"][parseISO(iso).getDay()];
 }
 
 function formatClock(date) {

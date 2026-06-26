@@ -9,12 +9,12 @@ Supabase SQL Editor에서 아래 SQL을 실행합니다.
 ```sql
 create table if not exists public.dodam_data (
   id text primary key,
-  data jsonb not null default '{"students":[],"packages":[],"lessons":[]}'::jsonb,
+  data jsonb not null default '{"students":[],"packages":[],"lessons":[],"attendance":[]}'::jsonb,
   updated_at timestamptz not null default now()
 );
 
 insert into public.dodam_data (id, data)
-values ('main', '{"students":[],"packages":[],"lessons":[]}'::jsonb)
+values ('main', '{"students":[],"packages":[],"lessons":[],"attendance":[]}'::jsonb)
 on conflict (id) do nothing;
 ```
 
